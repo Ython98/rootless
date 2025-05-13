@@ -1,13 +1,11 @@
 #!/data/data/com.termux/files/usr/bin/bash -e
 
-# Set TERM if not set
 [ -z "$TERM" ] && export TERM=xterm-256color
-
 BASE_URL="https://image-nethunter.kali.org/nethunter-fs/kali-weekly/"
 USERNAME="kali"
 SYS_ARCH="arm64"
 
-function ask() {
+ask() {
     while true; do
         if [ "${2:-}" = "Y" ]; then
             prompt="Y/n"
@@ -19,16 +17,10 @@ function ask() {
             prompt="y/n"
             default=
         fi
-
         printf "${light_cyan}\n[?] "
         read -p "$1 [$prompt] " REPLY
-
-        if [ -z "$REPLY" ]; then
-            REPLY=$default
-        fi
-
+        [ -z "$REPLY" ] && REPLY=$default
         printf "${reset}"
-
         case "$REPLY" in
             Y*|y*) return 0 ;;
             N*|n*) return 1 ;;
@@ -36,7 +28,7 @@ function ask() {
     done
 }
 
-function set_strings() {
+set_strings() {
     printf "${blue}[*] Selecting NetHunter image ...${reset}\n"
     echo "[1] NetHunter ARM64 (full)"
     echo "[2] NetHunter ARM64 (minimal)"
@@ -48,12 +40,11 @@ function set_strings() {
         3) wimg="nano" ;;
         *) wimg="full" ;;
     esac
-
     CHROOT="kali-${SYS_ARCH}"
     fetch_latest_image
 }
 
-function fetch_latest_image() {
+fetch_latest_image() {
     printf "${blue}[*] Fetching latest NetHunter image ...${reset}\n"
     IMAGE_LIST=$(curl -s "${BASE_URL}" | grep -o 'kali-nethunter-[0-9]\{4\}\.W[0-9]\{1,2\}-rolling-rootfs-'${wimg}'-'${SYS_ARCH}'.tar.xz' | sort -r)
     if [ -z "$IMAGE_LIST" ]; then
@@ -65,7 +56,7 @@ function fetch_latest_image() {
     printf "${blue}[*] Latest image: ${IMAGE_NAME}${reset}\n"
 }
 
-function prepare_fs() {
+prepare_fs() {
     unset KEEP_CHROOT
     if [ -d "${CHROOT}" ]; then
         if ask "Existing rootfs directory found. Delete and create a new one?" "N"; then
@@ -76,7 +67,7 @@ function prepare_fs() {
     fi
 }
 
-function cleanup() {
+cleanup() {
     if [ -f "${IMAGE_NAME}" ]; then
         if ask "Delete downloaded rootfs file?" "N"; then
             rm -f "${IMAGE_NAME}"
@@ -85,10 +76,9 @@ function cleanup() {
     fi
 }
 
-function check_dependencies() {
+check_dependencies() {
     printf "${blue}\n[*] Checking package dependencies...${reset}\n"
     apt-get update -y &> /dev/null || apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" dist-upgrade -y &> /dev/null
-
     for i in proot tar wget curl; do
         if [ -e "${PREFIX}/bin/$i" ]; then
             echo "  $i is OK"
@@ -103,12 +93,12 @@ function check_dependencies() {
     apt upgrade -y &> /dev/null
 }
 
-function get_url() {
+get_url() {
     ROOTFS_URL="${BASE_URL}${IMAGE_NAME}"
     SHA_URL="${BASE_URL}${SHA_NAME}"
 }
 
-function get_rootfs() {
+get_rootfs() {
     unset KEEP_IMAGE
     if [ -f "${IMAGE_NAME}" ]; then
         if ask "Existing image file found. Delete and download a new one?" "N"; then
@@ -127,7 +117,7 @@ function get_rootfs() {
     }
 }
 
-function check_sha_url() {
+check_sha_url() {
     if ! curl --head --silent --fail "${SHA_URL}" > /dev/null; then
         printf "${yellow}[!] SHA_URL does not exist or is unreachable${reset}\n"
         return 1
@@ -135,7 +125,7 @@ function check_sha_url() {
     return 0
 }
 
-function verify_sha() {
+verify_sha() {
     if [ -z "$KEEP_IMAGE" ]; then
         printf "\n${blue}[*] Verifying integrity of rootfs...${reset}\n"
         if [ -f "${SHA_NAME}" ]; then
@@ -150,7 +140,7 @@ function verify_sha() {
     fi
 }
 
-function get_sha() {
+get_sha() {
     if [ -z "$KEEP_IMAGE" ]; then
         printf "\n${blue}[*] Getting SHA ...${reset}\n"
         get_url
@@ -168,7 +158,7 @@ function get_sha() {
     fi
 }
 
-function extract_rootfs() {
+extract_rootfs() {
     if [ -z "$KEEP_CHROOT" ]; then
         printf "\n${blue}[*] Extracting rootfs...${reset}\n"
         mkdir -p "${CHROOT}"
@@ -181,7 +171,7 @@ function extract_rootfs() {
     fi
 }
 
-function create_launcher() {
+create_launcher() {
     NH_LAUNCHER="${PREFIX}/bin/nethunter"
     NH_SHORTCUT="${PREFIX}/bin/nh"
     cat > "${NH_LAUNCHER}" <<- EOF
@@ -189,12 +179,10 @@ function create_launcher() {
 cd \${HOME}
 unset LD_PRELOAD
 [ ! -f ${CHROOT}/root/.version ] && touch ${CHROOT}/root/.version
-
 user="${USERNAME}"
 home="/home/\${user}"
 start="sudo -u kali /bin/bash"
-
-if grep -q "kali" ${CHROOT}/etc/passwd; then
+ अगर grep -q "kali" ${CHROOT}/etc/passwd; then
     KALIUSR="1"
 else
     KALIUSR="0"
@@ -205,7 +193,6 @@ if [[ \${KALIUSR} == "0" || ("\$#" != "0" && ("\$1" == "-r" || "\$1" == "-R")) ]
     start="/bin/bash --login"
     [[ "\$#" != "0" && ("\$1" == "-r" || "\$1" == "-R") ]] && shift
 fi
-
 cmdline="proot \\
         --link2symlink \\
         -0 \\
@@ -221,7 +208,6 @@ cmdline="proot \\
            TERM=\${TERM} \\
            LANG=C.UTF-8 \\
            \${start}"
-
 cmd="\$@"
 if [ "\$#" == "0" ]; then
     exec \${cmdline}
@@ -229,24 +215,22 @@ else
     \${cmdline} -c "\${cmd}"
 fi
 EOF
-
     chmod 700 "${NH_LAUNCHER}"
     [ -L "${NH_SHORTCUT}" ] && rm -f "${NH_SHORTCUT}"
     [ ! -f "${NH_SHORTCUT}" ] && ln -s "${NH_LAUNCHER}" "${NH_SHORTCUT}" >/dev/null
 }
 
-function check_kex() {
+check_kex() {
     if [ "$wimg" = "nano" ] || [ "$wimg" = "minimal" ]; then
         nh sudo apt update && nh sudo apt install -y tightvncserver kali-desktop-xfce
     fi
 }
 
-function create_kex_launcher() {
+create_kex_launcher() {
     KEX_LAUNCHER="${CHROOT}/usr/bin/kex"
     cat > "${KEX_LAUNCHER}" <<- EOF
 #!/bin/bash
-
-function start-kex() {
+start-kex() {
     [ ! -f ~/.vnc/passwd ] && passwd-kex
     USR=\$(whoami)
     [ "\$USR" == "root" ] && SCREEN=":2" || SCREEN=":1"
@@ -255,19 +239,16 @@ function start-kex() {
     starting_kex=1
     return 0
 }
-
-function stop-kex() {
+stop-kex() {
     vncserver -kill :1 | sed s/"Xtigervnc"/"NetHunter KeX"/
     vncserver -kill :2 | sed s/"Xtigervnc"/"NetHunter KeX"/
     return \$?
 }
-
-function passwd-kex() {
+passwd-kex() {
     vncpasswd
     return \$?
 }
-
-function status-kex() {
+status-kex() {
     sessions=\$(vncserver -list | sed s/"TigerVNC"/"NetHunter KeX"/)
     if [[ \$sessions == *"590"* ]]; then
         printf "\n\${sessions}\n\nYou can use the KeX client to connect to any of these displays.\n\n"
@@ -276,12 +257,10 @@ function status-kex() {
     fi
     return 0
 }
-
-function kill-kex() {
+kill-kex() {
     pkill Xtigervnc
     return \$?
 }
-
 case \$1 in
     start) start-kex ;;
     stop) stop-kex ;;
@@ -291,33 +270,32 @@ case \$1 in
     *) stop-kex; start-kex; status-kex ;;
 esac
 EOF
-
     chmod 700 "${KEX_LAUNCHER}"
 }
 
-function fix_profile_bash() {
+fix_profile_bash() {
     [ -f "${CHROOT}/root/.bash_profile" ] && sed -i '/if/,/fi/d' "${CHROOT}/root/.bash_profile"
 }
 
-function fix_resolv_conf() {
+fix_resolv_conf() {
     echo "nameserver 9.9.9.9" > "${CHROOT}/etc/resolv.conf"
     echo "nameserver 149.112.112.112" >> "${CHROOT}/etc/resolv.conf"
 }
 
-function fix_sudo() {
+fix_sudo() {
     chmod +s "${CHROOT}/usr/bin/sudo" "${CHROOT}/usr/bin/su"
     echo "kali    ALL=(ALL:ALL) ALL" > "${CHROOT}/etc/sudoers.d/kali"
     echo "Set disable_coredump false" > "${CHROOT}/etc/sudo.conf"
 }
 
-function fix_uid() {
+fix_uid() {
     USRID=$(id -u)
     GRPID=$(id -g)
     nh -r usermod -u "${USRID}" kali 2>/dev/null
     nh -r groupmod -g "${GRPID}" kali 2>/dev/null
 }
 
-function print_banner() {
+print_banner() {
     clear
     printf "${blue}##################################################\n"
     printf "${blue}##                                              ##\n"
@@ -333,7 +311,6 @@ function print_banner() {
     printf "${blue}####  ############# NetHunter ####################${reset}\n\n"
 }
 
-# Add colors
 red='\033[1;31m'
 green='\033[1;32m'
 yellow='\033[1;33m'
@@ -351,7 +328,6 @@ get_sha
 extract_rootfs
 create_launcher
 cleanup
-
 printf "\n${blue}[*] Configuring NetHunter for Termux ...\n"
 fix_profile_bash
 fix_resolv_conf
@@ -359,7 +335,6 @@ fix_sudo
 check_kex
 create_kex_launcher
 fix_uid
-
 print_banner
 printf "${green}[=] Kali NetHunter for Termux installed successfully${reset}\n\n"
 printf "${green}[+] To start Kali NetHunter, type:${reset}\n"
