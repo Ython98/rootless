@@ -1,6 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/bash -e
 
-VERSION=2024091801
+VERSION=2025051101
 BASE_URL=https://image-nethunter.kali.org/nethunter-fs/kali-weekly
 USERNAME=kali
 
@@ -104,7 +104,7 @@ function set_strings() {
 
 
     CHROOT=kali-${SYS_ARCH}
-    IMAGE_NAME=kali-nethunter-2025.W19-rolling-rootfs-${wimg}-${SYS_ARCH}.tar.xz
+    IMAGE_NAME=kali-nethunter-2025.W19-rolling-rootfs-full-arm64.tar.xz
     SHA_NAME=${IMAGE_NAME}.sha512sum
 }    
 
