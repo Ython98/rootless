@@ -1,0 +1,2 @@
+# rootless
+termux rootless kali
